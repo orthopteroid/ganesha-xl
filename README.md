@@ -38,11 +38,11 @@ maximization problems, so if you're trying to solve a minimization problem you'l
 ## Sampling and Crossover Generalities
 
 The plugin's selection sampling routine (gxSample) uses a hybrid approach of objective-value and data-crc to remove population duplicates and
- reduce saturation. It also tracks the two best *unique* population members and ensure that 1/6 of the total population is given to cross breeding
+ reduce saturation. It also tracks the two best *unique* population members and ensure that 1/3 of the total population is given to cross breeding
 just those members with other viable candidates. They are also bred with themselves (without mutation) resulting in effectively a plain copy - to
  ensure they are preserved and not removed from the population accidentally.
 
-gzSample produces two columns indicies for use by the breeding (gxCross) but as these are output to sheet cells, you are welcome to interfere
+gxSample produces two columns indicies for use by the breeding (gxCross) but as these are output to sheet cells, you are welcome to interfere
 with the values before passing them on to gxCross. Either that or you can write your own or hack on gxSample itself.
 
 ## Schema
@@ -57,13 +57,16 @@ The schema is contained in text cells - either plain text or as a result of an E
 | `f,<offset>,<stepsize>,<stepcount>` | a floating point number discretized by `<stepsize>` with a minimum of `<offset>`. The number of bits required for the number is determined simply by something  like round(log2(`<stepcount>`)). |
 | `p,<n>,<k>,<group>,<pick>` | a `<pick>` from `<k>` of the permutation `<n>P<k>`. `<group>` is used to distinguish between multiple permute groups in the same schema. The number of bits extracted is determined from an estimate of the LogGamma function - determined in the code by Ramanujan's approximation.  |
 
-The permutation field is very structural and it may be useful to extend schema to support other kinds of structural fields. Some that come to mind include:
+The permutation field is very structural to a problem. It may be useful to extend the schema to support other kinds of structural
+ fields. Some that come to mind include:
 
 * a way to specify and extract the solution-terms of a Partial Sum Problem. A Partial Sum Problem might be useful to describe equality constraints on
   problems with network continuity - like supply/demand space-problems or storage fill/drain time-problems.
 * ?
 
 ## API
+
+To reduce calculation overhead the api is designed to return array values (except for gxPerm).
 
 | Function | Description |
 | --- | ---|
@@ -75,10 +78,10 @@ The permutation field is very structural and it may be useful to extend schema t
 
 ## Quick Tour
 
-As an example, the schema is typically laid out in a top row of a sheet. Here, `cur` is the current (input) population data and the
+As an example, the schema is typically laid out in a top row of a sheet. Here, column cur is the current (input) population data and the
  columns `f1,1,200` correspond to fields that are extracted as floats in the range of `[1,200]` in steps of `1.0`. The Area and
  Fence length columns are calculated from the extracted variables for the example problem. The obj column is the value of the
- objective function (really just area, as long as the Fence Length is `<= 500`). The srs column is the result of gxSample and
+ objective function (really just area, as long as the Fence Length is `<= 500`). The srs column is the output from gxSample and
  contains the indicies for rebreeding. The new column is the result of gxCross with the srs columns. When iterating, the VBA
  glue copies the new column into the cur column and evaluation continues again.
 
@@ -86,6 +89,9 @@ As an example, the schema is typically laid out in a top row of a sheet. Here, `
 
 Below the schema is the start of the population data (on the left). The best population member is always positioned as the first (0th) population
  member.  For the first 1/6 of the population the left srs column shows 0, to force breeding with this 0th member.
+
+In this example, green-colored objective-value cells are cells in the top 10% of all objective-values. This has been done just as
+ a debugging aide.
 
 ![schema](pics/pic-best1.png)
 
@@ -97,7 +103,7 @@ The second 1/3 of the population is just free-bred with any other member.
 
 ![schema](pics/pic-mixed.png)
 
-The last 1/3 of the population is given to random member generation using gxRandom. The objective function is evaluated for these members
+The last 1/3 of the population is given to random member generation using gxRandom (shown starting here in row 66). The objective function is evaluated for these members
  and they can be selected to bred with other members but there is no 'feedback' in the generation of these member data - which is why
  the new column ends prior to this section of the population.
 
